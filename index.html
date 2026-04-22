@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>警察抓小偷 · 百日菊侦探题库</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #eef2f7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 8px;
+            overflow: hidden;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 1300px;
+            height: 100%;
+            max-height: 98vh;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+            padding: 16px;
+            display: flex;
+            gap: 16px;
+            border: 6px solid #f8fafc;
+        }
+        .board-wrapper {
+            flex: 1;
+            position: relative;
+            min-width: 0;
+        }
+        .board-area {
+            width: 100%;
+            height: 100%;
+            background-color: #cbd5e1;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 20px;
+            padding: 6px;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 4px;
+            aspect-ratio: 10 / 8;
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.08);
+            transition: background-image 0.3s;
+            position: relative;
+        }
+        .board-area::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.05);
+            pointer-events: none;
+            border-radius: 20px;
+            z-index: 1;
+        }
+        .center-toast {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 20px 32px;
+            border-radius: 60px;
+            font-size: 28px;
+            font-weight: 900;
+            z-index: 200;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,215,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .rule-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 150;
+            pointer-events: none;
+        }
+        .rule-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 20px 24px;
+            max-width: 420px;
+            width: 85%;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.5);
+            pointer-events: auto;
+            display: none;
+            transition: all 0.2s;
+        }
+        .rule-card.show { display: block; }
+        .rule-card h3 { font-size: 20px; font-weight: 900; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; color: #1e293b; }
+        .rule-item { padding: 8px 10px; border-radius: 14px; margin-bottom: 6px; font-size: 12px; }
+        .close-rule { position: absolute; top: 14px; right: 18px; background: none; border: none; font-size: 26px; cursor: pointer; color: #64748b; line-height: 1; }
+        
+        .cell {
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.3s;
+            user-select: none;
+            border-bottom: 3px solid #cbd5e1;
+            z-index: 2;
+        }
+        .cell-num {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 10px;
+            font-weight: 900;
+            background: rgba(0,0,0,0.1);
+            color: #1e293b;
+            padding: 1px 4px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+        .cell-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding-top: 4px;
+        }
+        .cell-icon {
+            font-size: 26px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+            opacity: 1;
+            line-height: 1.2;
+        }
+        .cell-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: #334155;
+            margin-top: 2px;
+        }
+        
+        .cell-start { background: linear-gradient(145deg, #1e4bd2 0%, #0f2e8a 100%) !important; border-bottom-color: #0b1e5c !important; }
+        .cell-start .cell-label { color: #facc15; font-weight: 900; }
+        .cell-start .cell-icon { filter: drop-shadow(0 2px 6px gold); }
+        
+        .cell-rocket { background: #fdf08a !important; border-bottom-color: #eab308 !important; box-shadow: inset 0 0 0 1px #fde047; }
+        .cell-rocket .cell-label { color: #854d0e; font-weight: 900; }
+        
+        .cell-bomb { background: #fecdd3 !important; border-bottom-color: #f43f5e !important; box-shadow: inset 0 0 0 1px #fda4af; }
+        .cell-bomb .cell-label { color: #9f1239; font-weight: 900; }
+        
+        .cell-diamond { background: #a7f3d0 !important; border-bottom-color: #10b981 !important; box-shadow: inset 0 0 0 1px #6ee7b7; }
+        .cell-diamond .cell-label { color: #064e3b; font-weight: 900; }
+        
+        .cell-chain { background: #c7d2fe !important; border-bottom-color: #6366f1 !important; box-shadow: inset 0 0 0 1px #a5b4fc; }
+        .cell-chain .cell-label { color: #312e81; font-weight: 900; }
+
+        .cell-active:not(.cell-start):not(.cell-rocket):not(.cell-bomb):not(.cell-diamond):not(.cell-chain) {
+            background: #f8fafc;
+            border-bottom-color: #94a3b8;
+        }
+
+        .token {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 42px;
+            height: 42px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            filter: drop-shadow(0 6px 10px rgba(0,0,0,0.3));
+            pointer-events: none;
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .bounce-animation { animation: float 2s infinite ease-in-out; }
+        @keyframes float {
+            0%, 100% { transform: translate(-50%, -65%); }
+            50% { transform: translate(-50%, -45%); }
+        }
+        .token-police.offset { transform: translate(-85%, -55%); }
+        .token-thief.offset { transform: translate(-15%, -55%); }
+
+        .scene { width: 70px; height: 70px; margin: 6px auto; perspective: 700px; }
+        .dice { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 2.5s; }
+        .dice-face { position: absolute; width: 70px; height: 70px; background: white; border: 1px solid #e2e8f0; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; box-shadow: inset 0 0 10px rgba(0,0,0,0.05), 0 4px 6px rgba(0,0,0,0.1); }
+        .face-1 { transform: rotateY(0deg) translateZ(35px); color: #ef4444; }
+        .face-2 { transform: rotateY(90deg) translateZ(35px); }
+        .face-3 { transform: rotateX(90deg) translateZ(35px); }
+        .face-4 { transform: rotateX(-90deg) translateZ(35px); }
+        .face-5 { transform: rotateY(-90deg) translateZ(35px); }
+        .face-6 { transform: rotateY(180deg) translateZ(35px); }
+        .side-panel { width: 280px; display: flex; flex-direction: column; gap: 10px; }
+        .status-card { border-radius: 18px; padding: 12px; text-align: center; background: rgba(255,255,255,0.85); backdrop-filter: blur(4px); border: 1px solid #f1f5f9; box-shadow: 0 6px 12px -4px rgba(0,0,0,0.05); }
+        .modal { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); display: none; position: fixed; inset: 0; z-index: 1000; align-items: center; justify-content: center; }
+        .quiz-content-card { background: white; border-radius: 24px; padding: 24px; max-width: 550px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); transform: scale(0.9); transition: all 0.3s ease; }
+        .quiz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+        .quiz-option { padding: 10px; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 14px; text-align: left; font-weight: 700; transition: all 0.2s; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+        .quiz-option:hover { border-color: #6366f1; background: #f5f3ff; }
+        .quiz-option.correct { background: #d1fae5; border-color: #10b981; color: #065f46; }
+        .quiz-option.wrong { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        .option-tag { width: 24px; height: 24px; background: #e2e8f0; color: #475569; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+        .correct .option-tag { background: #10b981; color: white; }
+        .wrong .option-tag { background: #ef4444; color: white; }
+        .win-overlay { display: none; position: fixed; inset: 0; z-index: 2000; background: radial-gradient(circle, rgba(30,58,138,0.95) 0%, rgba(0,0,0,1) 100%); flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 16px; overflow-y: auto; }
+        .editor-card { background: white; border-radius: 20px; padding: 20px; max-width: 1200px; width: 90%; height: 80vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        .table-container { flex: 1; overflow-y: auto; margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f8fafc; position: sticky; top: 0; padding: 8px; text-align: left; font-size: 11px; color: #64748b; border-bottom: 2px solid #e2e8f0; z-index: 10; }
+        td { padding: 5px; border-bottom: 1px solid #f1f5f9; }
+        .q-input { width: 100%; padding: 5px 8px; border: 1px solid #e2e8f0; border-radius: 6px; outline: none; font-size: 11px; }
+        .q-input:focus { border-color: #6366f1; background: #fdfdff; }
+        .btn-delete { color: #ef4444; font-weight: bold; cursor: pointer; padding: 3px; }
+        .btn-delete:hover { background: #fee2e2; border-radius: 4px; }
+        .timer-display { font-size: 20px; font-weight: 900; color: #1e293b; letter-spacing: 1px; }
+        
+        .log-list { max-height: 220px; overflow-y: auto; background: rgba(255,255,255,0.1); border-radius: 14px; padding: 8px; margin-top: 12px; text-align: left; font-size: 11px; }
+        .log-header { display: flex; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 6px; font-weight: 700; color: #e2e8f0; }
+        .log-item { display: flex; align-items: center; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+        .log-role { width: 40px; font-weight: bold; color: #facc15; }
+        .log-question { flex: 2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 6px; }
+        .log-selected { width: 55px; text-align: center; }
+        .log-correct { width: 55px; text-align: center; color: #86efac; }
+        .log-result { width: 35px; text-align: center; font-size: 14px; }
+        
+        .bg-card { background: white; border-radius: 24px; padding: 24px; max-width: 460px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); }
+        .bg-preview { width: 100%; height: 100px; border-radius: 14px; background-size: cover; background-position: center; border: 2px dashed #cbd5e1; margin: 8px 0; display: flex; align-items: center; justify-content: center; color: #94a3b8; background-color: #f1f5f9; }
+        .top-btn { padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; transition: all 0.2s; }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="flex flex-col gap-1 flex-1" style="min-width:0;">
+        <div class="flex justify-between items-end px-1" style="flex-shrink:0;">
+            <div class="flex items-center gap-1">
+                <h1 class="text-lg font-black text-slate-800 tracking-tight">警察抓小偷<span class="text-indigo-600 ml-1 text-base">PRO</span></h1>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="toggleRules()" class="top-btn bg-amber-100 text-amber-700 hover:bg-amber-200">📖 规则</button>
+                <button onclick="showBgSettings()" class="top-btn bg-emerald-100 text-emerald-700 hover:bg-emerald-200">🖼️ 背景</button>
+                <button onclick="openEditor()" class="top-btn bg-indigo-600 text-white hover:bg-indigo-700">⚙️ 题库</button>
+                <button onclick="resetGame()" class="top-btn bg-slate-100 text-slate-500 hover:bg-slate-200">🔄 重置</button>
+                <button onclick="downloadGame()" class="top-btn bg-green-500 text-white hover:bg-green-600">💾 保存</button>
+            </div>
+        </div>
+        <div class="board-wrapper" style="flex:1; min-height:0;">
+            <div id="board" class="board-area"></div>
+            <div id="center-toast" class="center-toast"></div>
+            <div id="rule-overlay" class="rule-overlay" onclick="if(event.target===this) toggleRules()">
+                <div class="rule-card" onclick="event.stopPropagation()">
+                    <button class="close-rule" onclick="toggleRules()">&times;</button>
+                    <h3>📖 游戏规则（循环追击）</h3>
+                    <div class="rule-item bg-blue-50/80"><span class="font-bold">🎯 目标</span><br>警察(👮)必须总步数≥小偷(🥷)才能获胜。小偷到达31格后会回到起点继续跑，棋盘无限循环。</div>
+                    <div class="rule-item bg-amber-50/80"><span class="font-bold">🎲 流程</span><br>掷骰子→答题，答对前进，答错换边。</div>
+                    <div class="rule-item bg-purple-50/80"><span class="font-bold">✨ 特殊格子</span><br>🚀+3  💣-2  ⛓️禁锢  💎再掷</div>
+                    <div class="rule-item bg-green-50/80"><span class="font-bold">📊 记录</span><br>结束后显示答题详情，包含正确答案。</div>
+                    <p class="text-center text-xs text-slate-400 mt-2">点击外部或✕关闭</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="side-panel" style="flex-shrink:0;">
+        <div id="turn-card" class="status-card border-b-[3px] border-blue-500 !pb-2">
+            <p class="text-[7px] text-slate-400 font-bold uppercase mb-0.5">当前回合</p>
+            <h2 id="current-player-name" class="text-xl font-black text-blue-600">警察行动</h2>
+        </div>
+        <div class="status-card bg-slate-50/80 !p-2">
+            <p class="text-[7px] text-slate-400 font-bold uppercase mb-0.5">⏱️ 用时</p>
+            <div id="timer-display" class="timer-display">00:00</div>
+        </div>
+        <div class="status-card !p-2">
+            <div class="scene">
+                <div id="dice" class="dice">
+                    <div class="dice-face face-1">1</div><div class="dice-face face-2">2</div><div class="dice-face face-3">3</div>
+                    <div class="dice-face face-4">4</div><div class="dice-face face-5">5</div><div class="dice-face face-6">6</div>
+                </div>
+            </div>
+            <button id="roll-btn" onclick="handleRoll()" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-black py-2 rounded-xl shadow-md text-sm">掷骰子</button>
+            <div id="dice-result-val" class="mt-1 min-h-[28px] flex items-center justify-center text-xs font-bold text-slate-400 uppercase tracking-widest italic">等待行动...</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <div class="status-card bg-blue-50/80 border-none !p-2"><p class="text-[7px] font-bold text-blue-400 uppercase">警察</p><p id="p-score" class="text-xl font-black text-blue-700">0</p></div>
+            <div class="status-card bg-rose-50/80 border-none !p-2"><p class="text-[7px] font-bold text-rose-400 uppercase">小偷</p><p id="t-score" class="text-xl font-black text-rose-700">16</p></div>
+        </div>
+        <div class="status-card grid grid-cols-2 gap-2 !p-2">
+            <div class="bg-green-50/80 rounded-xl p-1.5"><p class="text-[7px] font-bold text-green-600 uppercase">✅ 答对</p><p id="correct-count" class="text-lg font-black text-green-700">0</p></div>
+            <div class="bg-red-50/80 rounded-xl p-1.5"><p class="text-[7px] font-bold text-red-600 uppercase">❌ 答错</p><p id="wrong-count" class="text-lg font-black text-red-700">0</p></div>
+        </div>
+        <div id="msg-box" class="flex-1 bg-slate-50/80 p-2 rounded-xl text-slate-500 font-bold text-xs text-center flex items-center justify-center border-2 border-dashed border-slate-100 italic">投出骰子，答题前进！</div>
+    </div>
+</div>
+
+<!-- Quiz Modal -->
+<div id="quiz-modal" class="modal">
+    <div class="quiz-content-card" id="quiz-content">
+        <div class="w-8 h-1 bg-indigo-100 rounded-full mx-auto mb-3"></div>
+        <p id="quiz-header" class="text-center font-black text-indigo-500 text-xs tracking-widest uppercase mb-1">CHALLENGE</p>
+        <h3 id="quiz-q" class="text-lg font-black text-slate-800 mb-3 leading-tight text-center">题目加载中...</h3>
+        <div id="quiz-options" class="quiz-grid"></div>
+    </div>
+</div>
+
+<!-- 背景设置 Modal -->
+<div id="bg-modal" class="modal" onclick="if(event.target.id==='bg-modal') closeBgSettings()">
+    <div class="bg-card">
+        <h3 class="text-xl font-black text-center mb-3">🖼️ 棋盘背景</h3>
+        <div class="space-y-3">
+            <div><p class="font-bold text-sm mb-1">📁 上传本地图片</p><input type="file" id="bg-upload" accept="image/*" class="w-full text-sm border rounded-lg p-1.5"></div>
+            <div><p class="font-bold text-sm mb-1">🌐 网络图片链接</p><input type="text" id="bg-url" placeholder="https://..." class="w-full border rounded-lg p-1.5 text-sm"></div>
+            <div id="bg-preview" class="bg-preview">预览区域</div>
+            <div class="flex gap-2">
+                <button id="apply-bg-btn" class="flex-1 bg-indigo-600 text-white py-1.5 rounded-lg font-bold text-sm">应用到棋盘</button>
+                <button id="reset-bg-btn" class="flex-1 bg-slate-200 text-slate-700 py-1.5 rounded-lg font-bold text-sm">清除背景</button>
+            </div>
+        </div>
+        <button onclick="closeBgSettings()" class="mt-3 w-full bg-slate-100 py-1.5 rounded-lg text-sm">关闭</button>
+    </div>
+</div>
+
+<!-- Table Editor Modal -->
+<div id="editor-modal" class="modal">
+    <div class="editor-card">
+        <div class="flex justify-between items-center mb-3">
+            <div><h3 class="text-lg font-black">表格化题库管理</h3><p class="text-slate-400 text-xs">格子ID对应棋盘位置 (0=起点, 1~31=普通格)</p></div>
+            <button onclick="addNewRow()" class="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-lg font-bold text-sm">+ 新增</button>
+        </div>
+        <div class="table-container">
+            <table id="questions-table">
+                <thead>
+                    <tr>
+                        <th width="5%">格子ID</th>
+                        <th width="25%">题目</th>
+                        <th width="10%">A</th>
+                        <th width="10%">B</th>
+                        <th width="10%">C</th>
+                        <th width="10%">D</th>
+                        <th width="12%">正确答案</th>
+                        <th width="8%">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="saveFromTable()" class="flex-1 bg-indigo-600 text-white py-2 rounded-xl font-bold text-sm">保存并更新</button>
+            <button onclick="closeEditor()" class="px-5 bg-slate-100 py-2 rounded-xl font-bold text-slate-400 text-sm">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 胜利浮层 -->
+<div id="win-overlay" class="win-overlay">
+    <div class="text-[70px] mb-1 animate-bounce" id="win-emoji">👮</div>
+    <h2 id="win-text" class="text-3xl font-black mb-1">警察成功抓捕！</h2>
+    <div id="win-stats" class="text-base font-bold mb-2 bg-white/20 backdrop-blur px-4 py-2 rounded-full">⏱️ 00:00 | ✅ 0 | ❌ 0</div>
+    <div class="w-full max-w-3xl bg-black/30 backdrop-blur rounded-xl p-3">
+        <h3 class="text-base font-bold mb-2">📋 答题记录（含正确答案）</h3>
+        <div class="log-header">
+            <span class="log-role">角色</span>
+            <span class="log-question">题目</span>
+            <span class="log-selected">你的选择</span>
+            <span class="log-correct">正确答案</span>
+            <span class="log-result">结果</span>
+        </div>
+        <div id="log-container" class="log-list"></div>
+    </div>
+    <button onclick="resetGame()" class="mt-4 bg-white text-indigo-900 px-8 py-3 rounded-full font-black text-lg hover:scale-105 transition">再来一局</button>
+    <p class="text-xs opacity-60 mt-2">点击背景关闭</p>
+</div>
+
+<script>
+    (function(){
+        // ---------- 题库数据（已填入您提供的32道题目）----------
+        let questions = [
+            {q: "这篇文章的主要目的是为了告诉我们什么？", options: ["不要随便采花", "遇到问题要仔细观察，通过推理找寻真相", "下雨天不要出门", "猫是很调皮的动物"], correct: "遇到问题要仔细观察，通过推理找寻真相"},
+            {q: "校工虎伯为什么在科学园发脾气？", options: ["扫把坏了扫不干净", "他种的百日菊被人摘走了", "爱丽丝弄脏了科学园", "天气太热让他心情不好"], correct: "他种的百日菊被人摘走了"},
+            {q: "文中形容虎伯发怒时的样子，哪项是不正确的？", options: ["脸色涨红", "脖子青筋暴起", "大声吼叫", "垂涎欲滴"], correct: "垂涎欲滴"},
+            {q: "爱丽丝为什么邀请日蒙加入“捉贼特工队”？", options: ["因为日蒙胆子很大", "因为日蒙长得像福尔摩斯", "因为日蒙观察力敏锐", "因为日蒙经常被奶奶骂"], correct: "因为日蒙观察力敏锐"},
+            {q: "刚成立特工队的第一周，他们的进展如何？", options: ["成功捉到了小偷", "找回了失窃的花朵", "一无所获，还多丢了两朵花", "发现是宗翔偷了花"], correct: "一无所获，还多丢了两朵花"},
+            {q: "“他们像泄了气的皮球”，这句话说明了什么？", options: ["他们很喜欢玩皮球", "他们觉得很累想睡觉", "他们失去了前进的动力和信心", "他们的皮球坏了"], correct: "他们失去了前进的动力和信心"},
+            {q: "谁是特工队里的“智囊团”或指导者？", options: ["爱丽丝", "虎伯", "日蒙的奶奶", "宗翔"], correct: "日蒙的奶奶"},
+            {q: "白奶奶如何判断“偷花贼刚刚来过”？", options: ["她亲眼看到了偷花贼", "她发现花朵的数量从四株变成了五株", "她听到了偷花贼的声音", "泥地上有新鲜的脚印"], correct: "她发现花朵的数量从四株变成了五株"},
+            {q: "走廊上的泥迹向哪里延伸？", options: ["延伸到校门口", "延伸到科学园", "延伸到石灰墙的小洞", "延伸到食堂"], correct: "延伸到石灰墙的小洞"},
+            {q: "他们在追踪的过程中发现了什么关键线索？", options: ["零星的菊花瓣", "偷花贼掉落的钱包", "一串钥匙", "很多猫毛"], correct: "零星的菊花瓣"},
+            {q: "谁是真正的“偷花贼”？", options: ["打哈欠的老人家", "几只爱蹭人的猫儿", "爱丽丝和宗翔", "校工虎伯"], correct: "几只爱蹭人的猫儿"},
+            {q: "为什么老人家拖鞋上有黄色花瓣？", options: ["因为他自己采了花", "因为猫儿偷吃了花，他在旁边蹭到了", "因为他路过花丛不小心踩到", "因为他想把花送给白奶奶"], correct: "因为猫儿偷吃了花，他在旁边蹭到了"},
+            {q: "故事的结局是怎样的？", options: ["老人家被警察抓走了", "爱丽丝向老人家道歉", "真相大白，大家不再介怀", "百日菊再也没有开花"], correct: "真相大白，大家不再介怀"},
+            {q: "“枝繁叶茂”的意思是什么？", options: ["树木的枝叶非常干枯", "树木的枝条和叶子长得很多很茂盛", "花朵开得很漂亮", "叶子掉光了"], correct: "树木的枝条和叶子长得很多很茂盛"},
+            {q: "哪组词语的读音是正确的？", options: ["沾 (zhān)、糟 (zāo)", "敏 (mǐng)、锐 (yuì)", "黎 (lí)、综 (zhōng)", "瓣 (pàn)、踩 (cǎi)"], correct: "沾 (zhān)、糟 (zāo)"},
+            {q: "“饥肠辘辘”形容的是什么？", options: ["肚子非常饿", "心情很烦躁", "身体很疲倦", "走起路来很快"], correct: "肚子非常饿"},
+            {q: "“目光炯炯”通常用来描写什么的眼神？", options: ["伤心的眼神", "迷茫的眼神", "明亮、有神的眼神", "愤怒的眼神"], correct: "明亮、有神的眼神"},
+            {q: "找出句子中的摹声词：“他在一旁啧啧啧地赞叹。”", options: ["赞叹", "他", "啧啧啧", "一旁"], correct: "啧啧啧"},
+            {q: "“毛遂自荐”的意思是？", options: ["推荐别人", "自己推荐自己", "强迫别人做事", "偷偷去做事"], correct: "自己推荐自己"},
+            {q: "选择正确的字填空：他在泥地上留下了鞋____。", options: ["迹", "绩", "积", "基"], correct: "迹"},
+            {q: "哪个词语形容路面不平整？", options: ["错综复杂", "凹凸不平", "四通八达", "寻寻觅觅"], correct: "凹凸不平"},
+            {q: "文中“嗯……”的省略号表示什么？", options: ["话未说完", "声音延长", "静默或思考", "解释说明"], correct: "静默或思考"},
+            {q: "“偷花贼必定在这附近留下……”省略号的作用是？", options: ["表示静默", "表示话未说完", "表示列举省略", "表示重复"], correct: "表示话未说完"},
+            {q: "下列哪个词语属于“数字成语”？", options: ["蛛丝马迹", "寻寻觅觅", "千军万马", "垂涎欲滴"], correct: "千军万马"},
+            {q: "“万众一心”中“万”字的意思是？", options: ["一万块钱", "极多，形容人数众多", "只有一个", "结束"], correct: "极多，形容人数众多"},
+            {q: "“百口莫辩”适合用在什么情况？", options: ["有很多嘴巴在说话", "无论怎么解释也没人相信", "很有口才，很会说话", "吃到美食无法形容"], correct: "无论怎么解释也没人相信"},
+            {q: "根据课文，白奶奶“脸色一沉”代表她当时的心情如何？", options: ["很高兴", "很惊讶", "严肃或不悦", "很害怕"], correct: "严肃或不悦"},
+            {q: "白奶奶最后“释怀地一笑”，这里的“释怀”是什么意思？", options: ["更加生气了", "放下心中的疙瘩，感到轻松", "怀疑别人", "大声笑出来"], correct: "放下心中的疙瘩，感到轻松"},
+            {q: "为什么说“雨后”是寻找线索的好时机？", options: ["因为雨后空气清新", "因为雨后泥地变软，容易留下脚印和痕迹", "因为下雨天小偷不出门", "因为雨后花开得更美"], correct: "因为雨后泥地变软，容易留下脚印和痕迹"},
+            {q: "白奶奶指着宗翔后头的鞋印是为了说明什么？", options: ["宗翔是偷花贼", "凡走过必留下痕迹", "宗翔不应该弄脏走廊", "宗翔的鞋子太大了"], correct: "凡走过必留下痕迹"},
+            {q: "从爱丽丝主动要帮虎伯捉贼来看，她是一个怎样的人？", options: ["贪玩、爱多管闲事", "热心、有正义感且勇于尝试", "胆小怕事", "只会指责别人"], correct: "热心、有正义感且勇于尝试"},
+            {q: "课文中提到“福尔摩斯奶奶”，这里的“福尔摩斯”象征什么？", options: ["英国人", "喜欢戴帽子的人", "智慧和卓越的侦探推理能力", "年纪很大的人"], correct: "智慧和卓越的侦探推理能力"}
+        ];
+
+        const pathIndices = [0,1,2,3,4,5,6,7,8,9,19,29,39,49,59,69,79,78,77,76,75,74,73,72,71,70,60,50,40,30,20,10];
+        const PATH_LENGTH = pathIndices.length;
+        const specialCells = {
+            4:{type:'rocket',label:'前进3格',icon:'🚀',action:3},
+            8:{type:'bomb',label:'后退2步',icon:'💣',action:-2},
+            12:{type:'chain',label:'禁锢',icon:'⛓️',action:'freeze'},
+            16:{type:'diamond',label:'再掷一次',icon:'💎',action:'again'},
+            20:{type:'rocket',label:'前进3格',icon:'🚀',action:3},
+            24:{type:'bomb',label:'后退2步',icon:'💣',action:-2},
+            28:{type:'chain',label:'禁锢',icon:'⛓️',action:'freeze'}
+        };
+        const streetIcons = ["🌳","🏠","🏢","🏪","🚕","🚲","🚦","📮"];
+        
+        let pSteps = 0, tSteps = 16, turn = 'police', isMoving = false;
+        let frozenTurns = {police:0, thief:0};
+        let currentRotation = {x:0, y:0};
+        let timerInterval=null, secondsElapsed=0;
+        let correctCount=0, wrongCount=0;
+        let answerLog = [];
+        
+        const policeToken = document.createElement('div');
+        policeToken.className = 'token token-police bounce-animation';
+        policeToken.innerHTML = '<span>👮</span>';
+        const thiefToken = document.createElement('div');
+        thiefToken.className = 'token token-thief bounce-animation';
+        thiefToken.innerHTML = '<span>🥷</span>';
+        
+        const boardEl = document.getElementById('board');
+        const toastEl = document.getElementById('center-toast');
+        let currentBoardBg = '';
+
+        function getDisplayPos(steps) {
+            return ((steps % PATH_LENGTH) + PATH_LENGTH) % PATH_LENGTH;
+        }
+        
+        function showCenterToast(message, emoji = '✨') {
+            toastEl.innerHTML = `${emoji} ${message}`;
+            toastEl.style.display = 'flex';
+            setTimeout(() => { toastEl.style.display = 'none'; }, 1200);
+        }
+
+        // ---------- 导出保存 ----------
+        window.downloadGame = function() {
+            let htmlContent = document.documentElement.outerHTML;
+            const regex = /(let questions = )\[[\s\S]*?\];/;
+            const replacement = `let questions = ${JSON.stringify(questions, null, 4)};`;
+            htmlContent = htmlContent.replace(regex, replacement);
+            
+            const blob = new Blob(['<!DOCTYPE html>\n' + htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '警察抓小偷_百日菊题库.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            msg("✅ 当前题库已打包保存！文件已下载。");
+        };
+
+        window.toggleRules = function() {
+            document.getElementById('rule-overlay').classList.toggle('show');
+            document.querySelector('.rule-card').classList.toggle('show');
+        };
+
+        window.showBgSettings = function() {
+            document.getElementById('bg-modal').style.display = 'flex';
+            updatePreview();
+        };
+        window.closeBgSettings = function() {
+            document.getElementById('bg-modal').style.display = 'none';
+        };
+        function updatePreview() {
+            const url = document.getElementById('bg-url').value.trim();
+            const preview = document.getElementById('bg-preview');
+            if(url) {
+                preview.style.backgroundImage = `url('${url}')`;
+                preview.style.backgroundSize = 'cover';
+                preview.innerHTML = '';
+            } else {
+                preview.style.backgroundImage = 'none';
+                preview.innerHTML = '预览区域';
+            }
+        }
+        document.getElementById('bg-url').addEventListener('input', updatePreview);
+        document.getElementById('bg-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    document.getElementById('bg-preview').style.backgroundImage = `url('${ev.target.result}')`;
+                    document.getElementById('bg-preview').style.backgroundSize = 'cover';
+                    document.getElementById('bg-preview').innerHTML = '';
+                    currentBoardBg = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        document.getElementById('apply-bg-btn').addEventListener('click', function() {
+            const url = document.getElementById('bg-url').value.trim();
+            if(document.getElementById('bg-upload').files.length > 0) {
+                boardEl.style.backgroundImage = `url('${currentBoardBg}')`;
+            } else if(url) {
+                boardEl.style.backgroundImage = `url('${url}')`;
+            } else {
+                alert('请上传图片或输入URL');
+                return;
+            }
+            boardEl.style.backgroundSize = 'cover';
+            boardEl.style.backgroundPosition = 'center';
+            closeBgSettings();
+        });
+        document.getElementById('reset-bg-btn').addEventListener('click', function() {
+            boardEl.style.backgroundImage = '';
+            boardEl.style.backgroundColor = '#cbd5e1';
+            document.getElementById('bg-url').value = '';
+            document.getElementById('bg-upload').value = '';
+            document.getElementById('bg-preview').style.backgroundImage = 'none';
+            document.getElementById('bg-preview').innerHTML = '预览区域';
+            currentBoardBg = '';
+            closeBgSettings();
+        });
+
+        function startTimer() { stopTimer(); secondsElapsed=0; updateTimerDisplay(); timerInterval = setInterval(() => { secondsElapsed++; updateTimerDisplay(); }, 1000); }
+        function stopTimer() { if(timerInterval) clearInterval(timerInterval); timerInterval=null; }
+        function resetTimer() { stopTimer(); secondsElapsed=0; updateTimerDisplay(); }
+        function updateTimerDisplay() {
+            const m = Math.floor(secondsElapsed/60).toString().padStart(2,'0');
+            const s = (secondsElapsed%60).toString().padStart(2,'0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+        function formatTime(sec) {
+            const m = Math.floor(sec/60).toString().padStart(2,'0');
+            const s = (sec%60).toString().padStart(2,'0');
+            return `${m}:${s}`;
+        }
+
+        function updateStatsUI() {
+            document.getElementById('correct-count').innerText = correctCount;
+            document.getElementById('wrong-count').innerText = wrongCount;
+        }
+        function addLog(question, selected, correctAnswer, isCorrect) {
+            answerLog.push({ role: turn==='police'?'👮 警察':'🥷 小偷', question, selected, correctAnswer, isCorrect });
+        }
+        function renderLogToWinOverlay() {
+            const container = document.getElementById('log-container');
+            if(!answerLog.length) {
+                container.innerHTML = '<div class="text-center text-white/60 py-4">暂无答题记录</div>';
+                return;
+            }
+            let html = '';
+            answerLog.forEach(log => {
+                html += `<div class="log-item">
+                    <span class="log-role">${log.role}</span>
+                    <span class="log-question" title="${log.question}">${log.question}</span>
+                    <span class="log-selected">${log.selected}</span>
+                    <span class="log-correct">${log.correctAnswer}</span>
+                    <span class="log-result ${log.isCorrect?'text-green-300':'text-red-300'}">${log.isCorrect?'✅':'❌'}</span>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function initBoard() {
+            boardEl.innerHTML = '';
+            for(let i=0; i<80; i++) {
+                const cell = document.createElement('div');
+                cell.id = `cell-container-${i}`;
+                cell.className = 'cell';
+                const pathIdx = pathIndices.indexOf(i);
+                if(pathIdx !== -1) {
+                    cell.classList.add('cell-active');
+                    cell.dataset.pathIdx = pathIdx;
+                    const numSpan = document.createElement('span');
+                    numSpan.className = 'cell-num';
+                    numSpan.innerText = pathIdx;
+                    cell.appendChild(numSpan);
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'cell-content';
+                    const iconDiv = document.createElement('div');
+                    iconDiv.className = 'cell-icon';
+                    const labelDiv = document.createElement('div');
+                    labelDiv.className = 'cell-label';
+                    if(pathIdx === 0) {
+                        cell.classList.add('cell-start');
+                        iconDiv.innerText = '🚩'; labelDiv.innerText = '起点';
+                    } else if(specialCells[pathIdx]) {
+                        const spec = specialCells[pathIdx];
+                        cell.classList.add(`cell-${spec.type}`);
+                        iconDiv.innerText = spec.icon; labelDiv.innerText = spec.label;
+                    } else {
+                        iconDiv.innerText = streetIcons[pathIdx % streetIcons.length];
+                        labelDiv.innerText = '街道';
+                    }
+                    contentDiv.appendChild(iconDiv);
+                    contentDiv.appendChild(labelDiv);
+                    cell.appendChild(contentDiv);
+                } else {
+                    cell.style.visibility = 'hidden';
+                }
+                boardEl.appendChild(cell);
+            }
+            syncPositions();
+        }
+
+        function syncPositions() {
+            const pDisplay = getDisplayPos(pSteps);
+            const tDisplay = getDisplayPos(tSteps);
+            const pRealIdx = pathIndices[pDisplay];
+            const tRealIdx = pathIndices[tDisplay];
+            const pCell = document.getElementById(`cell-container-${pRealIdx}`);
+            const tCell = document.getElementById(`cell-container-${tRealIdx}`);
+            if(pCell) pCell.appendChild(policeToken);
+            if(tCell) tCell.appendChild(thiefToken);
+            if(pDisplay === tDisplay) {
+                policeToken.classList.add('offset');
+                thiefToken.classList.add('offset');
+            } else {
+                policeToken.classList.remove('offset');
+                thiefToken.classList.remove('offset');
+            }
+            document.getElementById('p-score').innerText = pDisplay;
+            document.getElementById('t-score').innerText = tDisplay;
+        }
+
+        function msg(t) { document.getElementById('msg-box').innerText = t; }
+
+        window.resetGame = function() {
+            pSteps = 0; tSteps = 16; turn = 'police'; isMoving = false;
+            frozenTurns = {police:0, thief:0};
+            correctCount = 0; wrongCount = 0; answerLog = [];
+            updateStatsUI();
+            resetTimer();
+            syncPositions();
+            document.getElementById('current-player-name').innerText = '警察行动';
+            document.getElementById('current-player-name').className = "text-xl font-black text-blue-600";
+            document.getElementById('turn-card').style.borderBottomColor = '#3b82f6';
+            document.getElementById('dice-result-val').innerText = "等待投掷...";
+            document.getElementById('roll-btn').disabled = false;
+            document.getElementById('win-overlay').style.display = 'none';
+            document.getElementById('rule-overlay').classList.remove('show');
+            document.querySelector('.rule-card').classList.remove('show');
+            msg("游戏已重置，点击掷骰子开始计时。");
+        };
+
+        window.handleRoll = async function() {
+            if(isMoving) return;
+            if(!timerInterval) startTimer();
+            if(frozenTurns[turn] > 0) {
+                msg(`${turn==='police'?'👮 警察':'🥷 小偷'} 被禁锢！`);
+                frozenTurns[turn]--;
+                await new Promise(r => setTimeout(r, 1500));
+                changeTurn();
+                return;
+            }
+            isMoving = true;
+            document.getElementById('roll-btn').disabled = true;
+            const result = Math.floor(Math.random() * 6) + 1;
+            const dice = document.getElementById('dice');
+            const resultEl = document.getElementById('dice-result-val');
+            resultEl.innerText = "投掷中...";
+            const faceAngles = {1:{x:0,y:0},2:{x:0,y:-90},3:{x:-90,y:0},4:{x:90,y:0},5:{x:0,y:90},6:{x:0,y:180}};
+            const target = faceAngles[result];
+            currentRotation.x = (Math.ceil(currentRotation.x/360)*360) + 1440 + target.x;
+            currentRotation.y = (Math.ceil(currentRotation.y/360)*360) + 1440 + target.y;
+            dice.style.transform = `rotateX(${currentRotation.x}deg) rotateY(${currentRotation.y}deg)`;
+            await new Promise(r => setTimeout(r, 2400));
+            resultEl.innerHTML = `前进: <span class="text-lg ml-1">${result}</span>`;
+            resultEl.className = "mt-1 min-h-[28px] flex items-center justify-center text-base font-black text-indigo-600";
+            msg(`需前进 ${result} 步，请答题。`);
+            await new Promise(r => setTimeout(r, 600));
+            showQuiz(result);
+        };
+
+        function showQuiz(steps) {
+            const targetPos = getDisplayPos(turn==='police' ? pSteps + steps : tSteps + steps);
+            const data = questions[targetPos];
+            if(targetPos === 0 || !data.q) { finishTurn(); return; }
+            
+            const modal = document.getElementById('quiz-modal');
+            document.getElementById('quiz-header').innerText = turn==='police' ? "警察审讯" : "小偷解密";
+            document.getElementById('quiz-header').style.color = turn==='police' ? '#3b82f6' : '#f43f5e';
+            document.getElementById('quiz-q').innerText = data.q;
+            const optBox = document.getElementById('quiz-options');
+            optBox.innerHTML = '';
+            let correctIndex = -1;
+            data.options.forEach((opt, i) => {
+                const btn = document.createElement('div');
+                btn.className = 'quiz-option';
+                btn.innerHTML = `<div class="option-tag">${['A','B','C','D'][i]}</div><span>${opt}</span>`;
+                if(opt === data.correct) correctIndex = i;
+                btn.onclick = () => {
+                    optBox.querySelectorAll('.quiz-option').forEach(b => b.style.pointerEvents = 'none');
+                    const isCorrect = (opt === data.correct);
+                    addLog(data.q, opt, data.correct, isCorrect);
+                    if(isCorrect) {
+                        btn.classList.add('correct');
+                        correctCount++; updateStatsUI();
+                        msg("✅ 正确！");
+                        setTimeout(() => { modal.style.display = 'none'; moveStepByStep(steps); }, 800);
+                    } else {
+                        btn.classList.add('wrong');
+                        if(correctIndex !== -1) {
+                            optBox.querySelectorAll('.quiz-option')[correctIndex].classList.add('correct');
+                        }
+                        wrongCount++; updateStatsUI();
+                        msg(`❌ 错误，正确答案是 ${data.correct}`);
+                        setTimeout(() => { modal.style.display = 'none'; changeTurn(); }, 1800);
+                    }
+                };
+                optBox.appendChild(btn);
+            });
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('quiz-content').style.transform = 'scale(1)', 30);
+        }
+
+        async function moveStepByStep(s) {
+            for(let i=1; i<=s; i++) {
+                if(turn === 'police') pSteps++; else tSteps++;
+                pSteps = Math.max(0, pSteps);
+                tSteps = Math.max(0, tSteps);
+                syncPositions();
+                if(pSteps >= tSteps) { showWin(); return; }
+                await new Promise(r => setTimeout(r, 500));
+            }
+            await new Promise(r => setTimeout(r, 500));
+            const curDisplay = getDisplayPos(turn==='police' ? pSteps : tSteps);
+            const spec = specialCells[curDisplay];
+            if(spec) {
+                let toastMsg = '';
+                let emoji = spec.icon;
+                if(spec.action === 'freeze') toastMsg = `禁锢！下一轮无法行动`;
+                else if(spec.action === 'again') toastMsg = `再掷一次！`;
+                else if(spec.action > 0) toastMsg = `前进 ${spec.action} 格`;
+                else toastMsg = `后退 ${Math.abs(spec.action)} 步`;
+                showCenterToast(toastMsg, emoji);
+                msg(`触发: ${spec.label}`);
+                await new Promise(r => setTimeout(r, 1300));
+                
+                if(typeof spec.action === 'number') {
+                    for(let j=0; j<Math.abs(spec.action); j++) {
+                        if(spec.action > 0) { if(turn==='police') pSteps++; else tSteps++; }
+                        else { if(turn==='police') pSteps = Math.max(0, pSteps-1); else tSteps = Math.max(0, tSteps-1); }
+                        syncPositions();
+                        if(pSteps >= tSteps) { showWin(); return; }
+                        await new Promise(r => setTimeout(r, 350));
+                    }
+                } else if(spec.action === 'freeze') {
+                    frozenTurns[turn] = 1;
+                } else if(spec.action === 'again') {
+                    isMoving = false; document.getElementById('roll-btn').disabled = false; return;
+                }
+                syncPositions();
+                await new Promise(r => setTimeout(r, 400));
+            }
+            if(pSteps >= tSteps) showWin();
+            else changeTurn();
+        }
+
+        function showWin() {
+            stopTimer();
+            const policeCorrect = answerLog.filter(l => l.role.includes('警察') && l.isCorrect).length;
+            const policeWrong = answerLog.filter(l => l.role.includes('警察') && !l.isCorrect).length;
+            const thiefCorrect = answerLog.filter(l => l.role.includes('小偷') && l.isCorrect).length;
+            const thiefWrong = answerLog.filter(l => l.role.includes('小偷') && !l.isCorrect).length;
+            document.getElementById('win-overlay').style.display = 'flex';
+            document.getElementById('win-text').innerText = "警察成功抓捕！";
+            document.getElementById('win-emoji').innerText = "👮";
+            document.getElementById('win-stats').innerHTML = `⏱️ ${formatTime(secondsElapsed)}  |  👮 ✅${policeCorrect} ❌${policeWrong}  |  🥷 ✅${thiefCorrect} ❌${thiefWrong}`;
+            renderLogToWinOverlay();
+            isMoving = true; document.getElementById('roll-btn').disabled = true;
+            document.getElementById('win-overlay').onclick = (e) => { if(e.target.id==='win-overlay') document.getElementById('win-overlay').style.display = 'none'; };
+        }
+
+        function changeTurn() {
+            turn = turn==='police' ? 'thief' : 'police';
+            const nameEl = document.getElementById('current-player-name');
+            document.getElementById('dice-result-val').innerText = "等待投掷...";
+            nameEl.innerText = turn==='police' ? '警察行动' : '小偷行动';
+            nameEl.className = turn==='police' ? "text-xl font-black text-blue-600" : "text-xl font-black text-rose-600";
+            document.getElementById('turn-card').style.borderBottomColor = turn==='police' ? '#3b82f6' : '#f43f5e';
+            isMoving = false; document.getElementById('roll-btn').disabled = false;
+        }
+
+        // 渲染表格（带格子ID列）
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            questions.forEach((q, idx) => {
+                const tr = document.createElement('tr'); tr.className = 'q-row';
+                const opts = q.options.length===4 ? q.options : ["","","",""];
+                tr.innerHTML = `
+                    <td class="text-center font-bold text-indigo-600">${idx}</td>
+                    <td><input class="q-input q-text" value="${q.q.replace(/"/g,'&quot;')||''}" placeholder="题目"></td>
+                    <td><input class="q-input q-opt0" value="${opts[0]||''}" placeholder="A"></td>
+                    <td><input class="q-input q-opt1" value="${opts[1]||''}" placeholder="B"></td>
+                    <td><input class="q-input q-opt2" value="${opts[2]||''}" placeholder="C"></td>
+                    <td><input class="q-input q-opt3" value="${opts[3]||''}" placeholder="D"></td>
+                    <td><input class="q-input q-correct" value="${q.correct||''}" placeholder="答案"></td>
+                    <td class="text-center"><span class="btn-delete" onclick="deleteRow(this)">✕</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        window.addNewRow = function() {
+            const tbody = document.getElementById('table-body');
+            const newIdx = tbody.children.length;
+            const tr = document.createElement('tr'); tr.className='q-row';
+            tr.innerHTML = `
+                <td class="text-center font-bold text-indigo-600">${newIdx}</td>
+                <td><input class="q-input q-text" placeholder="新题目"></td>
+                <td><input class="q-input q-opt0" placeholder="A"></td>
+                <td><input class="q-input q-opt1" placeholder="B"></td>
+                <td><input class="q-input q-opt2" placeholder="C"></td>
+                <td><input class="q-input q-opt3" placeholder="D"></td>
+                <td><input class="q-input q-correct" placeholder="正确答案"></td>
+                <td class="text-center"><span class="btn-delete" onclick="deleteRow(this)">✕</span></td>
+            `;
+            tbody.appendChild(tr);
+        };
+        window.deleteRow = btn => {
+            const row = btn.closest('tr');
+            const tbody = document.getElementById('table-body');
+            const rows = Array.from(tbody.children);
+            const idx = rows.indexOf(row);
+            row.remove();
+            for(let i = idx; i < tbody.children.length; i++) {
+                tbody.children[i].querySelector('td:first-child').innerText = i;
+            }
+        };
+        window.saveFromTable = function() {
+            const rows = document.querySelectorAll('#table-body tr');
+            const newQ = [];
+            rows.forEach((r, idx) => {
+                const q = r.querySelector('.q-text').value.trim();
+                const opts = [
+                    r.querySelector('.q-opt0').value.trim(),
+                    r.querySelector('.q-opt1').value.trim(),
+                    r.querySelector('.q-opt2').value.trim(),
+                    r.querySelector('.q-opt3').value.trim()
+                ];
+                const cor = r.querySelector('.q-correct').value.trim();
+                if(idx === 0) {
+                    newQ.push({q: q || "起点", options: opts, correct: cor || ""});
+                } else {
+                    if(!q) { alert(`格子${idx}题目不能为空`); throw ''; }
+                    if(!opts.includes(cor)) { alert(`格子${idx}的答案"${cor}"不在选项中`); throw ''; }
+                    newQ.push({q, options: opts, correct: cor});
+                }
+            });
+            questions = newQ;
+            localStorage.setItem('policeThiefQuestions', JSON.stringify(questions));
+            msg("题库已更新");
+            closeEditor();
+        };
+        window.openEditor = () => { renderTable(); document.getElementById('editor-modal').style.display = 'flex'; };
+        window.closeEditor = () => document.getElementById('editor-modal').style.display = 'none';
+
+        const savedQuestions = localStorage.getItem('policeThiefQuestions');
+        if(savedQuestions) {
+            try {
+                const parsed = JSON.parse(savedQuestions);
+                if(parsed.length === PATH_LENGTH) questions = parsed;
+            } catch(e) {}
+        }
+
+        window.onload = () => { initBoard(); resetTimer(); };
+    })();
+</script>
+</body>
+</html>
